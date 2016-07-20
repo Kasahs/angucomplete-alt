@@ -22,15 +22,7 @@
 }(window, function (angular) {
   'use strict';
 
-  angular.module('angucomplete-alt', [])
-    .directive('angucompleteAlt', anguCompleteAltDirective);
-
-  anguCompleteAltDirective.$inject = [
-    '$q', '$parse', '$http', '$sce', 
-    '$timeout', '$templateCache', '$interpolate'
-  ];
-  function anguCompleteAltDirective($q, $parse, $http, $sce, 
-      $timeout, $templateCache, $interpolate) {
+  angular.module('angucomplete-alt', []).directive('angucompleteAlt', ['$q', '$parse', '$http', '$sce', '$timeout', '$templateCache', '$interpolate', function ($q, $parse, $http, $sce, $timeout, $templateCache, $interpolate) {
     // keyboard events
     var KEY_DW  = 40;
     var KEY_RT  = 39;
@@ -78,7 +70,7 @@
       var searchTimer = null;
       var hideTimer;
       var requiredClassName = REQUIRED_CLASS;
-      // var responseFormatter;
+      var responseFormatter;
       var validState = null;
       var httpCanceller = null;
       var dd = elem[0].querySelector('.angucomplete-dropdown');
@@ -91,13 +83,11 @@
       elem.on('mousedown', function(event) {
         if (event.target.id) {
           mousedownOn = event.target.id;
-          // when mousdown element is this element attach clickoutHandler
           if (mousedownOn === scope.id + '_dropdown') {
             document.body.addEventListener('click', clickoutHandlerForDropdown);
           }
         }
         else {
-          // maintain handle on mousdown element
           mousedownOn = event.target.className;
         }
       });
@@ -267,9 +257,7 @@
           if (!scope.showDropdown && scope.searchStr && scope.searchStr.length >= minlength) {
             initResults();
             scope.searching = true;
-            searchTimerComplete(scope.searchStr).then(function(matches){
-              processResults(matches, scope.searchStr);
-            });
+            searchTimerComplete(scope.searchStr);
           }
         }
         else if (which === KEY_ES) {
@@ -295,10 +283,7 @@
             scope.searching = true;
 
             searchTimer = $timeout(function() {
-              searchTimerComplete(scope.searchStr).then(function(matches){
-                processResults(matches, scope.searchStr);
-              });
-              
+              searchTimerComplete(scope.searchStr);
             }, scope.pause);
           }
 
@@ -320,7 +305,7 @@
           // cancel search timer
           $timeout.cancel(searchTimer);
           // cancel http request
-          // cancelHttpRequest();
+          cancelHttpRequest();
 
           setInputString(scope.searchStr);
         }
@@ -441,7 +426,7 @@
         }
       }
 
-      /*function httpSuccessCallbackGen(str) {
+      function httpSuccessCallbackGen(str) {
         return function(responseData, status, headers, config) {
           // normalize return obejct from promise
           if (!status && !headers && !config && responseData.data) {
@@ -452,9 +437,9 @@
             extractValue(responseFormatter(responseData), scope.remoteUrlDataField),
             str);
         };
-      }*/
+      }
 
-      /*function httpErrorCallback(errorRes, status, headers, config) {
+      function httpErrorCallback(errorRes, status, headers, config) {
         scope.searching = false;
 
         // cancelled/aborted
@@ -472,15 +457,15 @@
             console.error('http error');
           }
         }
-      }*/
+      }
 
-      /*function cancelHttpRequest() {
+      function cancelHttpRequest() {
         if (httpCanceller) {
           httpCanceller.resolve();
         }
-      }*/
+      }
 
-      /*function getRemoteResults(str) {
+      function getRemoteResults(str) {
         var params = {},
             url = scope.remoteUrl + encodeURIComponent(str);
         if (scope.remoteUrlRequestFormatter) {
@@ -496,9 +481,9 @@
         $http.get(url, params)
           .success(httpSuccessCallbackGen(str))
           .error(httpErrorCallback);
-      }*/
+      }
 
-      /*function getRemoteResultsWithCustomHandler(str) {
+      function getRemoteResultsWithCustomHandler(str) {
         cancelHttpRequest();
 
         httpCanceller = $q.defer();
@@ -506,7 +491,13 @@
         scope.remoteApiHandler(str, httpCanceller.promise)
           .then(httpSuccessCallbackGen(str))
           .catch(httpErrorCallback);
-      }*/
+
+        /* IE8 compatible
+        scope.remoteApiHandler(str, httpCanceller.promise)
+          ['then'](httpSuccessCallbackGen(str))
+          ['catch'](httpErrorCallback);
+        */
+      }
 
       function clearResults() {
         scope.showDropdown = false;
@@ -522,7 +513,7 @@
         scope.results = [];
       }
 
-      /*function getLocalResults(str) {
+      function getLocalResults(str) {
         var i, match, s, value,
             searchFields = scope.searchFields.split(','),
             matches = [];
@@ -542,7 +533,7 @@
           }
         }
         return matches;
-      }*/
+      }
 
       function checkExactMatch(result, obj, str){
         if (!str) { return false; }
@@ -555,7 +546,7 @@
         return false;
       }
 
-/*      function searchTimerComplete(str) {
+      function searchTimerComplete(str) {
         // Begin the search
         if (!str || str.length < minlength) {
           return;
@@ -577,21 +568,6 @@
         } else {
           getRemoteResults(str);
         }
-      }*/
-
-      function searchTimerComplete(str){
-        if (!str || str.length < minlength) {
-          return $q.when([]);
-        }
-        if(!scope.searchItems || (typeof scope.searchItems != 'function')){
-          return $q.when([]);
-        }
-        return $q.when(scope.searchItems({searchStr: str}))
-          .then(function(matches){
-            return matches || [];
-          }, function(){
-            return [];
-          });
       }
 
       function processResults(responseData, str) {
@@ -643,7 +619,7 @@
         }
       }
 
-      /*function showAll() {
+      function showAll() {
         if (scope.localData) {
           processResults(scope.localData, '');
         }
@@ -653,27 +629,13 @@
         else {
           getRemoteResults('');
         }
-      }*/
-      
-      
-      function showAll(){
-        if(scope.searchItems){
-          // handle promise and Array as return values
-          $q.when(scope.searchItems({searchStr: ''}))
-            .then(function(matches){
-              return matches || [];
-            }, function(){
-              return [];
-            });
-        }
-        return [];
       }
 
       scope.onFocusHandler = function() {
         if (scope.focusIn) {
           scope.focusIn();
         }
-        if (minlength === 0 && !scope.searchStr) {
+        if (minlength === 0 && (!scope.searchStr || scope.searchStr.length === 0)) {
           scope.currentIndex = scope.focusFirst ? 0 : scope.currentIndex;
           scope.showDropdown = true;
           showAll();
@@ -695,7 +657,7 @@
               }
             });
           }, BLUR_TIMEOUT);
-          // cancelHttpRequest();
+          cancelHttpRequest();
 
           if (scope.focusOut) {
             scope.focusOut();
@@ -738,7 +700,7 @@
 
       scope.inputChangeHandler = function(str) {
         if (str.length < minlength) {
-          // cancelHttpRequest();
+          cancelHttpRequest();
           clearResults();
         }
         else if (str.length === 0 && minlength === 0) {
@@ -804,7 +766,7 @@
       inputField.on('keyup', keyupHandler);
 
       // set response formatter
-      // responseFormatter = callFunctionOrIdentity('remoteUrlResponseFormatter');
+      responseFormatter = callFunctionOrIdentity('remoteUrlResponseFormatter');
 
       // set isScrollOn
       $timeout(function() {
@@ -821,21 +783,20 @@
         selectedObjectData: '=',
         disableInput: '=',
         initialValue: '=',
-        searchItems: '&',
-        // localData: '=',
-        // localSearch: '&',
-        // remoteUrlRequestFormatter: '=',
-        // remoteUrlRequestWithCredentials: '@',
-        // remoteUrlResponseFormatter: '=',
-        // remoteUrlErrorCallback: '=',
-        // remoteApiHandler: '=',
+        localData: '=',
+        localSearch: '&',
+        remoteUrlRequestFormatter: '=',
+        remoteUrlRequestWithCredentials: '@',
+        remoteUrlResponseFormatter: '=',
+        remoteUrlErrorCallback: '=',
+        remoteApiHandler: '=',
         id: '@',
         type: '@',
         placeholder: '@',
         textSearching: '@',
         textNoResults: '@',
-        // remoteUrl: '@',
-        // remoteUrlDataField: '@',
+        remoteUrl: '@',
+        remoteUrlDataField: '@',
         titleField: '@',
         descriptionField: '@',
         imageField: '@',
@@ -872,6 +833,6 @@
         return link;
       }
     };
-  };
+  }]);
 
 }));
