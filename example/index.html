@@ -52,7 +52,7 @@
 
         <h3><a name="example1" class="page-anchor">Example 1 - Countries of the World</a></h3>
         <div class="padded-row">
-<pre>
+<!-- <pre>
 &lt;div angucomplete-alt id="ex1"
   placeholder="Search countries"
   maxlength="50"
@@ -659,7 +659,35 @@ $scope.localSearch = function(str, people) {
           </div>
         </div>
       </div>
-
+ -->
+      <div class="padded-row">
+        <div angucomplete-alt id="ex15"
+             placeholder="Search countries"
+             maxlength="50"
+             pause="100"
+             selected-object="mySelectedCountry"
+             search-items="getCountries(searchStr)"
+             search-fields="name"
+             title-field="name"
+             minlength="1"
+             input-class="form-control form-control-small">
+            <angucomplete-template>
+              <div ng-if="imageField" class="angucomplete-image-holder">
+                  <img ng-if="result.image && result.image != ''" ng-src="{{result.image}}" class="angucomplete-image" />
+                  <div ng-if="!result.image && result.image != ''" class="angucomplete-image-default"></div>
+              </div>
+              <div class="angucomplete-title" ng-if="matchClass" ng-bind-html="result.title"></div>
+              <div class="angucomplete-title" ng-if="!matchClass">{{ result.title }}</div>
+              <div ng-if="matchClass && result.description && result.description != ''" class="angucomplete-description" ng-bind-html="result.description"></div>
+              <div ng-if="!matchClass && result.description && result.description != ''" class="angucomplete-description">{{result.description}}</div>    
+            </angucomplete-template>   
+        </div>
+      </div>
+      <div class="result">
+        <div ng-show="selectedCountry16">
+          You selected <span class="bold-span">{{mySelectedCountry.originalObject.name}}</span> <span ng-show="mySelectedCountry.originalObject.code">which has a country code of <span class="bold-span">{{mySelectedCountry.originalObject.code}}</span></span>
+        </div>
+      </div>
       <div class="very-large-padded-row">
         <h5>Originally developed by Daryl Rowland (<a href="http://twitter.com/darylrowland">@darylrowland</a>)</h5>
         <h5>Forked and developed by Hidenari Nozaki (<a href="http://twitter.com/ghiden">@ghiden</a>)</h5>
@@ -667,7 +695,9 @@ $scope.localSearch = function(str, people) {
 
       <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.6/angular.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.6/angular-touch.min.js"></script>
+      <!-- <script src="js/libs/angucomplete-alt.js"></script> -->
       <script src="js/libs/angucomplete-alt.js"></script>
+
       <script src="js/app.js"></script>
     </div>
   </body>

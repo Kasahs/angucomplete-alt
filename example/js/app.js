@@ -16,6 +16,14 @@ app.controller('MainController', ['$scope', '$http', '$rootScope',
 
     $scope.localSearch = function(str, people) {
       var matches = [];
+      return $http({
+        url: 'https://www.google.com',
+        method: 'GET'
+      }).then(function(res){
+          
+      },function(message){
+          
+      });
       people.forEach(function(person) {
         var fullName = person.firstName + ' ' + person.surname;
         if ((person.firstName.toLowerCase().indexOf(str.toString().toLowerCase()) >= 0) ||
@@ -32,6 +40,33 @@ app.controller('MainController', ['$scope', '$http', '$rootScope',
       {firstName: "Alan", surname: "Partridge", twitter: "@alangpartridge", pic: "img/alanp.jpg"},
       {firstName: "Annie", surname: "Rowland", twitter: "@anklesannie", pic: "img/annie.jpg"}
     ];
+
+    $scope.getCountries = function(searchStr){
+      return $http({
+          url: 'http://localhost:3000/getTopics',
+          method: 'GET'
+      }).then(function(res){
+        var results = $scope.countries.filter(function(country){
+          var idx = country.name.toLowerCase().indexOf(searchStr.toLowerCase());
+          if(idx > -1){
+            country._sortKey = idx;
+            return true;
+          }
+          return false;
+        });
+
+        results = results.sort(function(c1, c2){
+          if(c1._sortKey > c2._sortKey){
+            return 1;
+          } 
+          return -1;
+        });
+        return results;
+      }, function(res){
+        return [];
+      });
+      
+    }
 
     $scope.countries = [
       {name: 'Afghanistan', code: 'AF'},
