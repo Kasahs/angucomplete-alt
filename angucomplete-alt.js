@@ -44,7 +44,7 @@
         var MIN_LENGTH = 3;
         var MAX_LENGTH = 524288; // the default max length per the html maxlength attribute
         var PAUSE = 500;
-        var BLUR_TIMEOUT = 200;
+        var BLUR_TIMEOUT = 2000000;
 
         // string constants
         var REQUIRED_CLASS = 'autocomplete-required';
@@ -63,23 +63,10 @@
         HTML += "        ng-disabled=\"disableInput\" type=\"{{inputType}}\" placeholder=\"{{placeholder}}\" maxlength=\"{{maxlength}}\" ";
         HTML += "        ng-focus=\"onFocusHandler()\" class=\"{{inputClass}}\" ng-focus=\"resetHideResults()\" ng-blur=\"hideResults($event)\" ";
         HTML += "        autocapitalize=\"off\" autocorrect=\"off\" autocomplete=\"off\" ng-change=\"inputChangeHandler(searchStr)\" \/>";
-        HTML += "";
         HTML += "    <div id=\"{{id}}_dropdown\" class=\"angucomplete-dropdown\" ng-show=\"showDropdown\">";
         HTML += "        <div class=\"angucomplete-searching\" ng-show=\"searching\" ng-bind=\"textSearching\"><\/div>";
         HTML += "        <div class=\"angucomplete-searching\" ng-show=\"!searching && (!results || results.length == 0)\" ng-bind=\"textNoResults\"><\/div>";
-        HTML += "        <div class=\"angucomplete-row\" ng-repeat=\"result in results\" ng-click=\"selectResult(result)\" ng-mouseenter=\"hoverRow($index)\" ng-class=\"{'angucomplete-selected-row': $index == currentIndex}\"> {{result}}";
-        HTML += "            <div ng-transclude=\"customTemplate\"> ";
-        // HTML += "                <div ng-if=\"imageField\" class=\"angucomplete-image-holder\">";
-        // HTML += "                    <img ng-if=\"result.image && result.image != ''\" ng-src=\"{{result.image}}\" class=\"angucomplete-image\" \/>";
-        // HTML += "                    <div ng-if=\"!result.image && result.image != ''\" class=\"angucomplete-image-default\"><\/div>";
-        // HTML += "                <\/div>";
-        // HTML += "                <div class=\"angucomplete-title\" ng-if=\"matchClass\" ng-bind-html=\"result.title\"><\/div>";
-        // HTML += "                <div class=\"angucomplete-title\" ng-if=\"!matchClass\">{{ result.title }}<\/div>";
-        // HTML += "                <div ng-if=\"matchClass && result.description && result.description != ''\" class=\"angucomplete-description\" ng-bind-html=\"result.description\"><\/div>";
-        // HTML += "                <div ng-if=\"!matchClass && result.description && result.description != ''\" class=\"angucomplete-description\">{{result.description}}<\/div>    ";
-        HTML += "            <\/div>";
-        HTML += "            ";
-        HTML += "        <\/div>";
+        
         HTML += "    <\/div>";
         HTML += "<\/div>";
         HTML += "";
@@ -101,6 +88,54 @@
             var unbindInitialValue;
             var displaySearching;
             var displayNoResults;
+
+            var elements = [];
+            scope.results = [];
+            /*wrap template in ng repeat wrapper which contains itemName as iterator*/
+            scope.$watchCollection(function (){ return scope.results; },  function(collection){
+                var i;
+                if (elements.length > 0) {
+                    // if so remove them from DOM, and destroy their scope
+                    for (i = 0; i < elements.length; i++) {
+                        elements[i].el.remove();
+                        elements[i].scope.$destroy();
+                    };
+                    elements = [];
+                }
+
+                for (i = 0; i < collection.length; i++) {
+                    // create a new scope for every element in the collection.
+                    var childScope = scope.$new();
+                    // pass the current element of the collection into that scope
+                    childScope[scope.itemName] = collection[i];
+
+                    transclude(childScope, function(clone, scope) {
+                        // var HTML = '';
+                        // HTML += "<div class=\"angucomplete-row\"  ng-click=\"selectResult(result)\" ng-mouseenter=\"hoverRow($index)\" ng-class=\"{'angucomplete-selected-row': $index == currentIndex}\">";
+                        // HTML += "</div>";
+                        // var row = angular.element(HTML);
+                        // row.append(clone);
+                        var dropdown = elem[0].querySelector('.angucomplete-dropdown');
+                        angular.element(dropdown).append(clone);
+                        var block = {};
+                        block.el = clone;
+                        block.scope = childScope;
+                        elements.push(block);
+                    });
+                }
+
+            });
+
+            // transclude(scope, function(clone, scope) {
+            //     // var HTML = '';
+            //     // HTML += "<div class=\"angucomplete-row\"  ng-click=\"selectResult(result)\" ng-mouseenter=\"hoverRow($index)\" ng-class=\"{'angucomplete-selected-row': $index == currentIndex}\">";
+            //     // HTML += "</div>";
+            //     // var row = angular.element(HTML);
+            //     // row.append(clone);
+            //     var dropdown = elem[0].querySelector('.angucomplete-dropdown');
+            //     angular.element(dropdown).append(clone);
+            // });
+            
 
             elem.on('mousedown', function(event) {
                 if (event.target.id) {
@@ -476,10 +511,8 @@
                 if (!str || str.length < minlength) {
                     return $q.when([]);
                 }
-                if (!scope.searchItems || (typeof scope.searchItems != 'function')) {
-                    return $q.when([]);
-                }
-                return $q.when(scope.searchItems({ searchStr: str }))
+                
+                return $q.when(scope.$parent.$eval(scope.searchExpr))
                     .then(function(matches) {
                         return matches || [];
                     }, function() {
@@ -538,7 +571,7 @@
             function showAll() {
                 if (scope.searchItems) {
                     // handle promise and Array as return values
-                    $q.when(scope.searchItems({ searchStr: '' }))
+                    $q.when(scope.$parent.$eval(scope.searchExpr))
                         .then(function(matches) {
                             return matches || [];
                         }, function() {
@@ -699,7 +732,8 @@
                 selectedObjectData: '=',
                 disableInput: '=',
                 initialValue: '=',
-                searchItems: '&',
+                searchStr: "=",
+                itemExpr: '@acItems',
                 id: '@',
                 type: '@',
                 placeholder: '@',
@@ -729,7 +763,7 @@
             templateUrl: function(element, attrs) {
                 return attrs.templateUrl || TEMPLATE_URL;
             },
-            compile: function(tElement) {
+            compile: function(tElement, attrs) {
                 // accomodate different interpolate schemes
                 var startSym = $interpolate.startSymbol();
                 var endSym = $interpolate.endSymbol();
@@ -739,9 +773,42 @@
                         .replace(/\}\}/g, endSym);
                     tElement.html(interpolatedHtml);
                 }
+
+
+                // var itemExprParts, itemName;
+                // if(attrs.acItems){
+                //     itemExprParts = attrs.acItems.split(' in ');
+                //     if(itemExprParts.length == 2){
+
+                //         itemName = itemExprParts[0].trim();
+                //     }
+                // } else {
+                //     throw new TypeError("ac-items is mandatory and needs to be a valid string of the form 'item in getItems(searchStr)'. The names are variable but not the format");
+                // }
+                // // var HTML = "";
+                // // HTML += "<div class=\"angucomplete-row\" ng-repeat=\"" + itemName + " in results\" ng-click=\"selectResult(result)\" ng-mouseenter=\"hoverRow($index)\" ng-class=\"{'angucomplete-selected-row': $index == currentIndex}\">";
+                // // // HTML +=     "<div ng-transclude=\"customTemplate\"></div>";
+                // // HTML += "</div>";
+                // // var parentEl = tElement[0].querySelector('.angucomplete-dropdown');
+                // // angular.element(parentEl).append(angular.element(HTML));
                 return link;
-            }
+            },
+            controller: angucompleteController
         };
     };
 
+    angucompleteController.$inject = ['$scope', '$parse', '$transclude']
+    function angucompleteController($scope, $parse, $transclude){
+        var itemExprParts;
+        if($scope.itemExpr){
+            itemExprParts = $scope.itemExpr.split(' in ');
+            if(itemExprParts.length == 2){
+                $scope.itemName = itemExprParts[0].trim();
+                $scope.searchExpr = itemExprParts[1].trim();
+            }
+        } else {
+            throw new TypeError("ac-items is mandatory and needs to be a valid string of the form 'item in getItems(searchStr)'. The names are variable but not the format");
+        }
+        // $transclude($scope);
+    }
 }));

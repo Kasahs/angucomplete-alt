@@ -661,27 +661,22 @@ $scope.localSearch = function(str, people) {
       </div>
  -->
       <div class="padded-row">
-        <div angucomplete-alt id="ex15"
+        <angucomplete-alt id="ex15"
              placeholder="Search countries"
              maxlength="50"
              pause="100"
              selected-object="mySelectedCountry"
-             search-items="getCountries(searchStr)"
+             search-str="searchStr"
+             ac-items="item in getCountries(searchStr)"
              search-fields="name"
              title-field="name"
              minlength="1"
              input-class="form-control form-control-small">
             <angucomplete-template>
-              <div ng-if="imageField" class="angucomplete-image-holder">
-                  <img ng-if="result.image && result.image != ''" ng-src="{{result.image}}" class="angucomplete-image" />
-                  <div ng-if="!result.image && result.image != ''" class="angucomplete-image-default"></div>
-              </div>
-              <div class="angucomplete-title" ng-if="matchClass" ng-bind-html="result.title"></div>
-              <div class="angucomplete-title" ng-if="!matchClass">{{ result.title }}</div>
-              <div ng-if="matchClass && result.description && result.description != ''" class="angucomplete-description" ng-bind-html="result.description"></div>
-              <div ng-if="!matchClass && result.description && result.description != ''" class="angucomplete-description">{{result.description}}</div>    
+              <div style="color: blue;">Country: {{item.title}}</div>
+              <div style="color: red;">Code: {{item.originalObject.code}}</div>
             </angucomplete-template>   
-        </div>
+        </angucomplete-alt>
       </div>
       <div class="result">
         <div ng-show="selectedCountry16">
